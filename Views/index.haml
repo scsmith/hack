@@ -1,0 +1,184 @@
+!!!
+%html
+  %head
+    %title HackCamp
+    -#= stylesheet_link_tag 'screen', :media => 'screen, mobile'
+    = javascript_include_tag 'jquery-1.4.2.min.js', 'mflow.js', 'textchanged.js'
+    <script type="text/javascript" src="/jqtouch/jqtouch.js"></script>
+    = javascript_include_tag 'app.js'
+    <link href="jqtouch/jqtouch.css" media="screen, mobile" rel="stylesheet" type="text/css">
+    <link href="themes/apple/theme.min.css" media="screen, mobile" rel="stylesheet" type="text/css">
+    
+    <meta name="viewport" content="user-scalable=no, width=device-width, initial-scale=1.0, maximum-scale=1.0"/>
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black" />
+    <link rel="apple-touch-startup-image" href="/startup.png" />
+    <link rel="apple-touch-icon" href="/icon.png" />
+    
+    /<style type="text/css" media="screen">@import "/iui/iui.css";</style>
+    /<link href="iui/iui.css" media="screen, mobile" rel="stylesheet" type="text/css">
+    /<script type="text/javascript" src="/iui/iui.js"></script>
+    :css
+      #about {
+        padding: 100px 10px 40px;
+        color: #fff;
+        text-shadow: rgba(255, 255, 255, 0.3) 0px -1px 0;
+        font-size: 13px;
+        text-align: center;
+        background: #161618;
+      }
+      #about img {
+        margin: 20px
+      }
+      #about p {
+        margin-bottom: 8px;
+      }
+      #about a {
+        color: #fff;
+        font-weight: bold;
+        text-decoration: none;
+      }
+      
+    :javascript
+      var key = 'API_KEY_HERE';
+    
+      var jQT = new $.jQTouch({
+        icon: 'logo.png',
+        addGlossToIcon: false,
+        startupScreen: 'startup.png',
+        statusBar: 'black',
+        preloadImages: [
+          'themes/apple/img/back_button.png',
+          'themes/apple/img/back_button_clicked.png',
+          'themes/apple/img/button_clicked.png',
+          'themes/apple/img/grayButton.png',
+          'themes/apple/img/whiteButton.png',
+          'themes/apple/img/loading.gif'
+        ]
+      });
+      
+      $.extend({URLEncode:function(c){var o='';var x=0;c=c.toString();var r=/(^[a-zA-Z0-9_.]*)/;
+        while(x<c.length){var m=r.exec(c.substr(x));
+          if(m!=null && m.length>1 && m[1]!=''){o+=m[1];x+=m[1].length;
+          }else{if(c[x]==' ')o+='+';else{var d=c.charCodeAt(x);var h=d.toString(16);
+          o+='%'+(h.length<2?'0':'')+h.toUpperCase();}x++;}}return o;},
+      URLDecode:function(s){var o=s;var binVal,t;var r=/(%[^%]{2})/;
+        while((m=r.exec(o))!=null && m.length>1 && m[1]!=''){b=parseInt(m[1].substr(1),16);
+        t=String.fromCharCode(b);o=o.replace(m[1],t);}return o;}
+      });
+      
+      
+      $(function(){
+        $('#hotartists').
+          bind('pageAnimationStart', function(e, info){ 
+            //alert('start');
+            navigator.geolocation.getCurrentPosition(function(position){
+              //alert(position.coords.latitude)
+              //alert(position.coords.longitude)
+              getHotArtists(position)
+            });
+          }).
+          bind('pageAnimationEnd', function(e, info){
+            //alert('stop');
+          });
+        });
+        
+        function getHotArtists(position){
+          var lat =  position.coords.latitude // $.URLEncode('51.5075')
+          var long = position.coords.longitude // $.URLEncode('-0.1136')
+          var url = 'http://api.gigjunkie.net/v1.0/hot-artists?ConsumerKey=' + key + '&latitude=' + lat + '&longitude=' + long + '&distance=200' + '&format=json&callback=?';
+          console.log(url)
+          
+          $.getJSON(url, function(data) {
+            console.log(data.ApiResponse.Events);
+            $('#hot_artists_list').empty();
+            for (var i=0; i < data.ApiResponse.Artists.length; i++)
+            {
+              //alert(data.ApiResponse.Events[i].Name);
+              $('#hot_artists_list').append('<li>' + data.ApiResponse.Artists[i].Name + '</li>')
+            }
+          });
+        }
+
+        function getEvents(query){
+          var url = 'http://api.gigjunkie.net/v1.0/events' + '?ConsumerKey=' + key + '&q=' + query + '&format=json&callback=?';
+          console.log(url)
+          
+          $.getJSON(url, function(data) {
+            console.log(data.ApiResponse.Events);
+            $('#event_list').empty();
+            for (var i=0; i < data.ApiResponse.Events.length; i++)
+            {
+              //alert(data.ApiResponse.Events[i].Name);
+              var event = data.ApiResponse.Events[i]
+              $('#event_list').append('<li class="arrow" data-name="' + event.Name + '" data-gig-url="' + event.GigJunkieUrl + '" data-event-id="'+ event.Id  + '"><a href="' + event.GigJunkieUrl + '" target="_blank">' + event.Name + '</a></li>')
+            }
+            
+            $('#event_list li').click(function(){
+              jQT.goTo('#about_event', 'slide');
+              $('#about_event h1').html($(this).attr('data-name'));
+              $('#about_event #gig_link').attr('href', $(this).attr('data-gig-url'));
+              return false;
+            })
+          });
+        }
+  %body
+  
+    #home.current
+      .toolbar
+        %h1 Hack Camp
+        = link_to 'About', '#about', :id => :infoButton, :class => 'button slideup'
+  
+      .search{:style => 'background-color: #ddd; height: 30px; padding: 5px 15px 10px 5px'}
+        %input(type="text" name="search" placeholder="Search Artist" id="search" style="width: 100%; padding-left: 5px; height: 100%; line-height: 14px; font-size: 14px")
+        :javascript
+          var timeout;
+          $('#search').bind('textchange', function () {
+            clearTimeout(timeout);
+            var self = this;
+            timeout = setTimeout(function () {
+              getEvents($('#search').val());
+            }, 1000);
+          });
+    
+      %ul{:class => :rounded}
+        %li{:class => :arrow}= link_to 'Hot Artists Near Me', '#hotartists'
+        %li{:class => :arrow}= link_to 'Hot Events Near Me', '#hotevents'
+      
+      %ul{:class => :rounded, :id => 'event_list'}
+        //%li
+
+    #about.selectable
+      = image_tag '/logo.png'
+      <p><strong>HackCamp</strong><br />Demo<br />
+      <p><em>An Example App</em></p>
+      = link_to 'Back', '#home', :class => "goback"
+    
+    #hotartists
+      .toolbar
+        %h1 Hot Artists
+        = link_to 'Back', '#home', :class => "back"
+      %ul{:class => :rounded, :id => 'hot_artists_list'}
+        //%li
+    
+    #hotevents
+      .toolbar
+        %h1 Hot Events
+        = link_to 'Back', '#home', :class => "back"
+      
+      %ul{:class => :rounded, :id => 'hot_events_list'}
+        %li Um...... I ran out of time?
+        
+    #about_event
+      .toolbar
+        %h1 Hot Events
+        = link_to 'Back', '#home', :class => "back"
+      
+      %ul{:class => :rounded, :id => 'about_event'}
+        %li= link_to 'View on GigJunkie', '#', :id => :gig_link, :target => "_blank"
+        
+      %ul
+        %li
+          <audio src="/song.mp3" controls autobuffer></audio>
+      
+
